@@ -1,0 +1,179 @@
+<% layout("layouts/boilerplate") %>
+
+<div class="row mt-4">
+  <div class="col-8 offset-2">
+
+    <!-- TITLE -->
+    <h3 class="mb-3"><%= listing.title %></h3>
+
+    <!-- LISTING CARD -->
+    <div class="card mb-4 listing-card">
+
+      <img 
+        src="<%= listing.image?.url || 'https://images.unsplash.com/photo-1501785888041-af3ef285b470' %>"
+        class="card-img-top"
+        alt="listing image"
+        style="height: 22rem; object-fit: cover;"
+      >
+
+      <div class="card-body">
+
+        <p class="card-text">
+          <i>Owned By: <%= listing.owner.username %></i>
+        </p>
+
+        <p class="card-text">
+          <%= listing.description %>
+        </p>
+
+        <p class="card-text">
+          <strong>₹ <%= listing.price.toLocaleString("en-IN") %></strong> / night
+        </p>
+
+        <p class="card-text text-muted">
+          <%= listing.location %>, <%= listing.country %>
+        </p>
+
+        <!-- MAP SECTION -->
+        <hr>
+        <h5 class="mt-3">Location</h5>
+
+        <div id="map" style="height: 400px; border-radius: 10px;"></div>
+
+        <script>
+  const coordinates = <%- JSON.stringify(listing.geometry ? listing.geometry.coordinates : null) %>;
+
+  if (coordinates && coordinates.length === 2) {
+
+    const map = L.map('map').setView(
+      [coordinates[1], coordinates[0]],
+      12
+    );
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    L.marker([coordinates[1], coordinates[0]])
+      .addTo(map)
+      .bindPopup("<%= listing.location %>")
+      .openPopup();
+
+  } else {
+    document.getElementById("map").innerHTML =
+      "<p class='text-muted'>Location not available</p>";
+  }
+</script>
+
+      </div>
+    </div>
+
+    <!-- EDIT / DELETE BUTTONS -->
+    <% if(currUser && listing.owner._id.equals(currUser._id)) { %>
+      <div class="d-flex gap-2 mb-5">
+        <a 
+          href="/listings/<%= listing._id %>/edit" 
+          class="btn btn-danger btn-lg add-btn"
+        >
+          Edit
+        </a>
+
+        <form 
+          method="POST" 
+          action="/listings/<%= listing._id %>?_method=DELETE"
+        >
+          <button class="btn btn-outline-danger btn-lg">
+            Delete
+          </button>
+        </form>
+      </div>
+    <% } %>
+
+
+    <!-- REVIEWS SECTION -->
+    <div class="col-8 offset-1 mb-3">
+      <hr />
+
+      <% if(currUser) { %>
+        <h4>Leave a review</h4>
+
+        <form 
+          action="/listings/<%= listing._id %>/reviews" 
+          method="POST" 
+          class="needs-validation" 
+          novalidate
+        >
+
+          <!-- RATING -->
+          <label class="form-label">Rating</label>
+          <fieldset class="starability-slot">
+            <input type="radio" id="no-rate" class="input-no-rate" name="review[rating]" value="1" checked />
+            <input type="radio" id="first-rate1" name="review[rating]" value="1" />
+            <label for="first-rate1">1 star</label>
+
+            <input type="radio" id="first-rate2" name="review[rating]" value="2" />
+            <label for="first-rate2">2 stars</label>
+
+            <input type="radio" id="first-rate3" name="review[rating]" value="3" />
+            <label for="first-rate3">3 stars</label>
+
+            <input type="radio" id="first-rate4" name="review[rating]" value="4" />
+            <label for="first-rate4">4 stars</label>
+
+            <input type="radio" id="first-rate5" name="review[rating]" value="5" />
+            <label for="first-rate5">5 stars</label>
+          </fieldset>
+
+          <!-- COMMENT -->
+          <div class="mb-3 mt-3">
+            <label class="form-label">Comment</label>
+            <textarea 
+              name="review[comment]" 
+              class="form-control"
+              rows="5"
+              required
+            ></textarea>
+            <div class="invalid-feedback">
+              Please write a review before submitting.
+            </div>
+          </div>
+
+          <button class="btn btn-outline-dark">Submit</button>
+        </form>
+      <% } %>
+
+      <!-- ALL REVIEWS -->
+      <p class="mt-4"><b>All Reviews</b></p>
+
+      <div class="row">
+        <% for(review of listing.reviews) { %>
+          <div class="card col-5 ms-3 mb-3">
+            <div class="card-body">
+              <h5 class="card-title">
+                @<%= review.author.username %>
+              </h5>
+
+              <p class="starability-result card-text" data-rating="<%= review.rating %>"></p>
+
+              <p class="card-text">
+                <%= review.comment %>
+              </p>
+            </div>
+
+            <% if(currUser && review.author._id.equals(currUser._id)) { %>
+              <form 
+                class="mb-3" 
+                method="POST" 
+                action="/listings/<%= listing._id %>/reviews/<%= review._id %>?_method=DELETE"
+              >
+                <button class="btn btn-sm btn-dark">Delete</button>
+              </form>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+
+    </div>
+
+  </div>
+</div>
