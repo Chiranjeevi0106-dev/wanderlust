@@ -18,27 +18,40 @@ module.exports.showListing = async (req, res) => {
 
 module.exports.createListing = async (req, res) => {
   const newListing = new Listing(req.body.listing);
-
+  await new Promise(resolve => setTimeout(resolve, 1000));
   //  Geocode location using OpenStreetMap Nominatim 
-  const geoResponse = await fetch(
-  `https://nominatim.openstreetmap.org/search?format=json&q=${req.body.listing.location}`
+const response = await fetch(
+  `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(req.body.listing.location)}`,
+  {
+    headers: {
+      "User-Agent": "wanderlust-app (skv.chiranjeevi@gmail.com)"
+    }
+  }
 );
 
-const geoData = await geoResponse.json();
-console.log("GeoData:", geoData);
+const text = await response.text();
 
-  if (!geoData.length) {
-    req.flash("error", "Invalid location name");
-    return res.redirect("/listings/new");
-  }
+let data;
+try {
+  data = JSON.parse(text);
+} catch (err) {
+  console.error("Nominatim blocked response:", text);
+  req.flash("error", "Location service blocked. Try again later.");
+  return res.redirect("/listings/new");
+}
 
-  const lat = geoData[0].lat;
-  const lon = geoData[0].lon;
+if (!data.length) {
+  req.flash("error", "Invalid location");
+  return res.redirect("/listings/new");
+}
 
-  newListing.geometry = {
-    type: "Point",
-    coordinates: [lon, lat], // IMPORTANT: longitude first
-  };
+const lat = data[0].lat;
+const lon = data[0].lon;
+
+newListing.geometry = {
+  type: "Point",
+  coordinates: [lon, lat],
+};
 
   // Cloudinary Image
   if (req.file) {
